@@ -1,0 +1,24 @@
+services:
+  - type: web_service
+    name: shl-recommender-backend
+    env: docker
+    dockerfilePath: Dockerfile
+    plan: free
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: ALLOWED_CORS_ORIGINS
+        value: "*"
+      - key: LLM_PROVIDER
+        value: "template"
+    healthCheckPath: /health
+
+  - type: web_service
+    name: shl-recommender-frontend
+    env: docker
+    dockerfilePath: frontend/Dockerfile
+    plan: free
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: "https://shl-recommender-backend.onrender.com"
+

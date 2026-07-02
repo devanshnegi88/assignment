@@ -1,0 +1,64 @@
+# Version control
+.git
+.gitignore
+.github
+
+# Local development
+.venv
+venv
+env
+*.pyc
+__pycache__
+.pytest_cache
+.coverage
+*.egg-info
+
+# IDE/Editor
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Test files (but keep them for Render to verify)
+# Actually, remove this line to allow tests
+
+# Build artifacts
+dist/
+build/
+*.tar.gz
+
+# Node
+node_modules/
+npm-debug.log
+
+# Python
+*.egg
+dist/
+build/
+.Python
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
