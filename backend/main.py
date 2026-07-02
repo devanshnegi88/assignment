@@ -41,21 +41,29 @@ from fastapi.responses import FileResponse
 from pathlib import Path
 
 from pathlib import Path
-from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
-FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+FRONTEND_DIR = (
+    Path(__file__).resolve().parent / "frontend" / "dist"
+)
+
+import logging
+from pathlib import Path
+
+logging.info("Current working directory: %s", Path.cwd())
+logging.info("Frontend path: %s", FRONTEND_DIR)
+logging.info("Frontend exists: %s", FRONTEND_DIR.exists())
+
+backend_dir = Path(__file__).resolve().parent
+logging.info("Backend directory contents: %s", list(backend_dir.iterdir()))
 
 if FRONTEND_DIR.exists():
 
-    assets_dir = FRONTEND_DIR / "assets"
+    assets = FRONTEND_DIR / "assets"
 
-    if assets_dir.exists():
-        app.mount(
-            "/assets",
-            StaticFiles(directory=assets_dir),
-            name="assets",
-        )
+    if assets.exists():
+        app.mount("/assets", StaticFiles(directory=assets), name="assets")
 
     @app.get("/", include_in_schema=False)
     async def serve_frontend():
