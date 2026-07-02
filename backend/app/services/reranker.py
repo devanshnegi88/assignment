@@ -46,30 +46,62 @@ def rerank_candidates(candidates: List[CatalogItem], query: str, decision_summar
         import google.generativeai as genai
 
         genai.configure(api_key=settings.llm_api_key)
-        resp = genai.generate(model=settings.llm_model, text=prompt)
-        text = ""
-        if resp and getattr(resp, "candidates", None):
-            text = resp.candidates[0].content[0].text
+
+        model = genai.GenerativeModel(settings.llm_model)
+        response = model.generate_content(prompt)
+
+        text = getattr(response, "text", "")
+
+        if not text and getattr(response, "candidates", None):
+            parts = response.candidates[0].content.parts
+            text = "".join(
+                getattr(part, "text", "")
+                for part in parts
+                if hasattr(part, "text")
+            )
+
         if not text:
             return candidates
-        parsed = json.loads(text.strip())
+
+        text = text.strip()
+
+        if text.startswith("```"):
+            text = (
+                text.replace("```json", "")
+                .replace("```", "")
+                .strip()
+            )
+
+        parsed = json.loads(text)
+
         if not isinstance(parsed, list):
             return candidates
 
-        urls = [u.rstrip("/").lower() for u in parsed if isinstance(u, str)]
+        urls = [
+            u.rstrip("/").lower()
+            for u in parsed
+            if isinstance(u, str)
+        ]
+
         ordered = []
         seen = set()
+
         for url in urls:
             for item in candidates:
-                if item.url.rstrip("/").lower() == url and item.url not in seen:
+                if (
+                    item.url.rstrip("/").lower() == url
+                    and item.url not in seen
+                ):
                     ordered.append(item)
                     seen.add(item.url)
                     break
+
         for item in candidates:
             if item.url not in seen:
                 ordered.append(item)
+
         return ordered
+
     except Exception as exc:
         logger.info("Gemini reranker unavailable or failed: %s", exc)
         return candidates
-*** End Patch

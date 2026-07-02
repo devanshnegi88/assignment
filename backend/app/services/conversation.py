@@ -13,6 +13,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
+from click import prompt
+
 from app.retrieval.hybrid import RetrievalConstraints
 from app.core.config import settings
 import json
@@ -252,88 +254,88 @@ def _assistant_asked_recommendation_confirmation(messages: List[ChatMessage]) ->
     return False
 
 
-def _extract_slots(text: str) -> Dict[str, Any]:
-    lowered = text.lower()
-    slots: Dict[str, Any] = {
-        "hiring_role": None,
-        "target_population": None,
-        "seniority": None,
-        "assessment_purpose": None,
-        "technical_skills": [],
-        "leadership_requirements": [],
-        "personality_requirements": [],
-        "competencies": [],
-    }
+# def _extract_slots(text: str) -> Dict[str, Any]:
+#     lowered = text.lower()
+#     slots: Dict[str, Any] = {
+#         "hiring_role": None,
+#         "target_population": None,
+#         "seniority": None,
+#         "assessment_purpose": None,
+#         "technical_skills": [],
+#         "leadership_requirements": [],
+#         "personality_requirements": [],
+#         "competencies": [],
+#     }
 
-    # Extract hiring role/context
-    # Try to find explicit role mentions first
-    if any(hint in lowered for hint in _ROLE_HINTS):
-        # Priority order for specific roles
-        for hint in ["developer", "engineer", "manager", "analyst", "sales", "assistant", "recruiter"]:
-            if hint in lowered:
-                slots["hiring_role"] = hint.title()
-                break
+#     # Extract hiring role/context
+#     # Try to find explicit role mentions first
+#     if any(hint in lowered for hint in _ROLE_HINTS):
+#         # Priority order for specific roles
+#         for hint in ["developer", "engineer", "manager", "analyst", "sales", "assistant", "recruiter"]:
+#             if hint in lowered:
+#                 slots["hiring_role"] = hint.title()
+#                 break
         
-        # If no specific role matched but role hints are present, try broader matching
-        if slots["hiring_role"] is None:
-            # Look for role-like patterns: "X operator", "X role", "X position", etc.
-            role_pattern_matches = re.findall(r"([\w\s]+?)\s+(operator|position|role|level|function|specialist|professional|person)", lowered)
-            if role_pattern_matches:
-                potential_role = role_pattern_matches[0][0].strip()
-                if potential_role and len(potential_role) < 30:
-                    slots["hiring_role"] = potential_role.title()
+#         # If no specific role matched but role hints are present, try broader matching
+#         if slots["hiring_role"] is None:
+#             # Look for role-like patterns: "X operator", "X role", "X position", etc.
+#             role_pattern_matches = re.findall(r"([\w\s]+?)\s+(operator|position|role|level|function|specialist|professional|person)", lowered)
+#             if role_pattern_matches:
+#                 potential_role = role_pattern_matches[0][0].strip()
+#                 if potential_role and len(potential_role) < 30:
+#                     slots["hiring_role"] = potential_role.title()
             
-            # Fallback: check for common organizational/domain references
-            if slots["hiring_role"] is None:
-                if "leadership" in lowered or "executive" in lowered:
-                    slots["hiring_role"] = "Executive / Leadership"
-                elif "frontline" in lowered or "entry-level" in lowered:
-                    slots["hiring_role"] = "Entry-Level"
-                else:
-                    slots["hiring_role"] = "Position"
+#             # Fallback: check for common organizational/domain references
+#             if slots["hiring_role"] is None:
+#                 if "leadership" in lowered or "executive" in lowered:
+#                     slots["hiring_role"] = "Executive / Leadership"
+#                 elif "frontline" in lowered or "entry-level" in lowered:
+#                     slots["hiring_role"] = "Entry-Level"
+#                 else:
+#                     slots["hiring_role"] = "Position"
 
-    if any(hint in lowered for hint in _TARGET_POPULATION_HINTS):
-        if "cxos" in lowered or "director" in lowered or "executive" in lowered:
-            slots["target_population"] = "executive / leadership population"
-        elif "graduate" in lowered:
-            slots["target_population"] = "graduates"
-        else:
-            slots["target_population"] = "target population"
+#     if any(hint in lowered for hint in _TARGET_POPULATION_HINTS):
+#         if "cxos" in lowered or "director" in lowered or "executive" in lowered:
+#             slots["target_population"] = "executive / leadership population"
+#         elif "graduate" in lowered:
+#             slots["target_population"] = "graduates"
+#         else:
+#             slots["target_population"] = "target population"
 
-    if any(hint in lowered for hint in _SENIORITY_HINTS):
-        if "15+" in lowered or "15 years" in lowered or "more than 15" in lowered:
-            slots["seniority"] = "15+ years"
-        elif "senior" in lowered:
-            slots["seniority"] = "senior"
-        elif "mid-level" in lowered or "mid professional" in lowered:
-            slots["seniority"] = "mid-level"
-        elif "graduate" in lowered or "final-year" in lowered:
-            slots["seniority"] = "graduate"
-        elif "entry-level" in lowered or "no work experience" in lowered:
-            slots["seniority"] = "entry-level"
-        else:
-            slots["seniority"] = "seniority"
+#     if any(hint in lowered for hint in _SENIORITY_HINTS):
+#         if "15+" in lowered or "15 years" in lowered or "more than 15" in lowered:
+#             slots["seniority"] = "15+ years"
+#         elif "senior" in lowered:
+#             slots["seniority"] = "senior"
+#         elif "mid-level" in lowered or "mid professional" in lowered:
+#             slots["seniority"] = "mid-level"
+#         elif "graduate" in lowered or "final-year" in lowered:
+#             slots["seniority"] = "graduate"
+#         elif "entry-level" in lowered or "no work experience" in lowered:
+#             slots["seniority"] = "entry-level"
+#         else:
+#             slots["seniority"] = "seniority"
 
-    if any(hint in lowered for hint in _PURPOSE_HINTS):
-        if "development" in lowered or "developmental" in lowered or "re-skill" in lowered:
-            slots["assessment_purpose"] = "development"
-        elif "selection" in lowered or "benchmark" in lowered or "compare candidates" in lowered or "talent audit" in lowered:
-            slots["assessment_purpose"] = "selection"
+#     if any(hint in lowered for hint in _PURPOSE_HINTS):
+#         if "development" in lowered or "developmental" in lowered or "re-skill" in lowered:
+#             slots["assessment_purpose"] = "development"
+#         elif "selection" in lowered or "benchmark" in lowered or "compare candidates" in lowered or "talent audit" in lowered:
+#             slots["assessment_purpose"] = "selection"
 
-    for hint in _SKILL_HINTS:
-        if hint in lowered:
-            slots["technical_skills"].append(hint)
-    for hint in _LEADERSHIP_HINTS:
-        if hint in lowered:
-            slots["leadership_requirements"].append(hint)
-    for hint in _PERSONALITY_HINTS:
-        if hint in lowered:
-            slots["personality_requirements"].append(hint)
-    for hint in _COMPETENCY_HINTS:
-        if hint in lowered:
-            slots["competencies"].append(hint)
+#     for hint in _SKILL_HINTS:
+#         if hint in lowered:
+#             slots["technical_skills"].append(hint)
+#     for hint in _LEADERSHIP_HINTS:
+#         if hint in lowered:
+#             slots["leadership_requirements"].append(hint)
+#     for hint in _PERSONALITY_HINTS:
+#         if hint in lowered:
+#             slots["personality_requirements"].append(hint)
+#     for hint in _COMPETENCY_HINTS:
+#         if hint in lowered:
+#             slots["competencies"].append(hint)
 
-    return slots
+#     return slots
 
 
 def _gemini_extract_slots(text: str) -> Dict[str, Any]:
@@ -354,21 +356,26 @@ def _gemini_extract_slots(text: str) -> Dict[str, Any]:
     )
 
     # Try SDK
-    try:
-        import google.generativeai as genai
+try:
+    import google.generativeai as genai
 
-        genai.configure(api_key=settings.llm_api_key)
-        resp = genai.generate(model=settings.llm_model, text=prompt)
-        if resp and getattr(resp, "candidates", None):
-            body = resp.candidates[0].content[0].text
-            try:
-                parsed = json.loads(body)
-                if isinstance(parsed, dict):
-                    return parsed
-            except Exception:
-                return {}
-    except Exception:
-        pass
+    genai.configure(api_key=settings.llm_api_key)
+
+    model = genai.GenerativeModel(settings.llm_model)
+    resp = model.generate_content(prompt)
+
+    body = resp.text.strip()
+
+    if body.startswith("```"):
+        body = body.replace("```json", "").replace("```", "").strip()
+
+    parsed = json.loads(body)
+
+    if isinstance(parsed, dict):
+        return parsed
+
+except Exception:
+    pass
 
     # HTTP fallback
     try:
