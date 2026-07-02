@@ -40,18 +40,37 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pathlib import Path
 
+from pathlib import Path
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 
 if FRONTEND_DIR.exists():
-    app.mount(
-        "/assets",
-        StaticFiles(directory=FRONTEND_DIR / "assets"),
-        name="assets",
-    )
 
-    @app.get("/")
+    assets_dir = FRONTEND_DIR / "assets"
+
+    if assets_dir.exists():
+        app.mount(
+            "/assets",
+            StaticFiles(directory=assets_dir),
+            name="assets",
+        )
+
+    @app.get("/", include_in_schema=False)
     async def serve_frontend():
         return FileResponse(FRONTEND_DIR / "index.html")
+
+else:
+
+    @app.get("/", include_in_schema=False)
+    async def root():
+        return {
+            "service": "SHL Conversational Assessment Recommender",
+            "status": "running",
+            "health": "/health",
+            "chat": "/chat",
+        }
 
 
 @app.on_event("startup")
