@@ -15,7 +15,11 @@ from app.catalog.loader import get_catalog, get_catalog_service
 from app.core.config import settings
 from app.retrieval.hybrid import HybridRetriever
 from app.schemas.chat import ChatMessage, ChatResponse, Recommendation
-from app.services.conversation import ConversationUnderstandingError, TurnAction, TurnDecision, classify_turn
+from app.services.conversation import (
+    TurnAction,
+    TurnDecision,
+    classify_turn,
+)
 from app.services.llm import LLMProviderError, get_llm_provider
 from app.catalog.schema import CatalogItem
 from app.retrieval.hybrid import RetrievalConstraints
@@ -333,7 +337,7 @@ def run_turn(messages: List[ChatMessage]) -> ChatResponse:
     turn_cap_reached = len(messages) >= settings.max_turns
     try:
         decision: TurnDecision = classify_turn(messages)
-    except (ConversationUnderstandingError, LLMProviderError) as exc:
+    except LLMProviderError as exc:
         logger.exception("Conversation understanding failed")
         return ChatResponse(
             reply=(
