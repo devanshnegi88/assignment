@@ -15,8 +15,8 @@ from app.catalog.loader import get_catalog, get_catalog_service
 from app.core.config import settings
 from app.retrieval.hybrid import HybridRetriever
 from app.schemas.chat import ChatMessage, ChatResponse, Recommendation
-from app.services.conversation import TurnAction, TurnDecision, classify_turn
-from app.services.llm import get_llm_provider
+from app.services.conversation import ConversationUnderstandingError, TurnAction, TurnDecision, classify_turn
+from app.services.llm import LLMProviderError, get_llm_provider
 from app.catalog.schema import CatalogItem
 from app.retrieval.hybrid import RetrievalConstraints
 from app.catalog.schema import TEST_TYPE_LABEL_TO_CODE
@@ -98,10 +98,10 @@ def get_retriever() -> HybridRetriever:
 
 _SHORTLIST_URL_RE = re.compile(r"https?://www\.shl\.com/products/product-catalog/view/[^\s\)]+", re.IGNORECASE)
 
-# Phrases the reply generator (app/services/llm.py, app/prompts/templates.py) uses
-# for RECOMMEND / REFINE / COMPLETE turns. Kept in sync with
-# app.services.conversation._ASSISTANT_SHORTLIST_HINTS so both modules agree on
-# what counts as "the assistant announced a shortlist here".
+# Phrases the Gemini reply generator used for RECOMMEND / REFINE / COMPLETE
+# turns. Kept in sync with app.services.conversation._ASSISTANT_SHORTLIST_HINTS
+# so both modules agree on what counts as "the assistant announced a shortlist
+# here".
 _SHORTLIST_ANNOUNCEMENT_HINTS = [
     "that fit what you described", "i found", "i updated the shortlist",
     "final shortlist confirmed",
@@ -331,7 +331,19 @@ def run_turn(messages: List[ChatMessage]) -> ChatResponse:
     llm = get_llm_provider()
 
     turn_cap_reached = len(messages) >= settings.max_turns
-    decision: TurnDecision = classify_turn(messages)
+    try:
+        decision: TurnDecision = classify_turn(messages)
+    except (ConversationUnderstandingError, LLMProviderError) as exc:
+        logger.exception("Conversation understanding failed")
+        return ChatResponse(
+            reply=(
+                "I'm temporarily unable to understand your request. "
+                "Please try again in a moment."
+            ),
+            recommendations=[],
+            end_of_conversation=False,
+        )
+
     # Map extracted conversation slots into hard retrieval constraints so
     # that user-specified metadata (seniority, purpose, skills, languages)
     # influence the HybridRetriever.
@@ -397,7 +409,18 @@ def run_turn(messages: List[ChatMessage]) -> ChatResponse:
         shortlist = []
 
     conversation_summary = _summarize_conversation(messages)
-    reply = llm.generate_reply(decision, shortlist, conversation_summary)
+    try:
+        reply = llm.generate_reply(decision, shortlist, conversation_summary)
+    except LLMProviderError:
+        logger.exception("LLM reply generation failed")
+        return ChatResponse(
+            reply=(
+                "I'm temporarily unable to generate a response right now. "
+                "Please try again in a moment."
+            ),
+            recommendations=[],
+            end_of_conversation=False,
+        )
 
     recommendations = (
         _to_recommendations(shortlist)

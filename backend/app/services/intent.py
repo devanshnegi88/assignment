@@ -31,8 +31,6 @@ from abc import ABC, abstractmethod
 from functools import lru_cache
 from typing import Any, Dict, List
 
-import httpx
-
 from app.core.config import settings
 
 logger = logging.getLogger("intent_extraction")
@@ -175,10 +173,8 @@ class RuleBasedSlotExtractor(SlotExtractor):
 
 class LLMSlotExtractor(SlotExtractor):
     """Gemini-backed extractor for open-vocabulary phrasing the rule-based
-    hint lists can't cover. Falls back to RuleBasedSlotExtractor on any
-    network error, timeout, or malformed response."""
-
-    ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+    hint lists can't cover. Uses the official Google GenAI SDK and falls back
+    to RuleBasedSlotExtractor on any network error, timeout, or malformed response."""
 
     def __init__(self, api_key: str, model: str, timeout: float, fallback: SlotExtractor):
         self.api_key = api_key
@@ -188,9 +184,10 @@ class LLMSlotExtractor(SlotExtractor):
 
     def extract(self, text: str, prior_slots: Dict[str, Any]) -> Dict[str, Any]:
         try:
-            url = self.ENDPOINT.format(model=self.model)
-            resp = httpx.post(
-                f"{url}?key={self.api_key}",
+            import google.generativeai as genai
+
+            genai.configure(api_key=self.api_key)
+            resp = genai.generate(model=self.model, text=self._build_prompt(text, prior_slots))
                 json={
                     "contents": [{"parts": [{"text": self._build_prompt(text, prior_slots)}]}],
                     "generationConfig": {

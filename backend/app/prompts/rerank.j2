@@ -1,0 +1,15 @@
+Rank the following SHL catalog items by how suitable they are for this request.
+Return ONLY a JSON array of item URLs in order from most to least suitable.
+
+Request: {{ query }}
+Context: {{ decision_summary }}
+
+Candidates:
+{% for item in candidates %}- url: {{ item.url }}
+  name: {{ item.name }}
+  test_type: {{ item.test_type_labels | join(', ') }}
+  levels: {{ item.job_levels | join(', ') }}
+  languages: {{ item.languages | join(', ') }}
+  duration: {{ item.duration_minutes }}
+  description: {{ item.description | tojson }}
+{% endfor %}

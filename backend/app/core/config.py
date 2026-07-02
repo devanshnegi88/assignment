@@ -28,22 +28,16 @@ class Settings(BaseSettings):
     hybrid_keyword_weight: float = 0.5
 
     # -- LLM provider ------------------------------------------------------
-    # "template" needs no API key and no network access -- it's the safe
-    # default and the fallback used on LLM timeout/error. Swap to "gemini"
-    # or "groq" or "openrouter" once you have a free-tier key; the
-    # abstraction in app/services/llm.py is what makes that a one-line change.
-    llm_provider: str = os.getenv("LLM_PROVIDER", "template")
-    llm_api_key: str = os.getenv("LLM_API_KEY", "")
-    llm_model: str = os.getenv("LLM_MODEL", "gemini-1.5-flash")
-    llm_timeout_seconds: float = 12.0  # reply generation call; leaves headroom under 30s
-
-    # -- Slot/intent extraction (app/services/intent.py) ------------------
-    # Runs BEFORE reply generation, so its timeout has to leave headroom
-    # for that second call too: intent (8s) + reply (12s) + local
-    # retrieval leaves ~10s of slack under the evaluator's 30s call budget.
-    # Falls back to the rule-based extractor on timeout, same as the LLM
-    # reply provider falls back to the template on timeout.
-    intent_timeout_seconds: float = 8.0
+    # Gemini 2.5 Flash (via the official Google GenAI SDK) is the only
+    # conversation-intelligence provider. The API key is read from the
+    # environment -- never hardcoded. Accepts either GEMINI_API_KEY (the
+    # SDK's own conventional name) or SHL_LLM_API_KEY (this app's prefix).
+    llm_provider: str = os.getenv("LLM_PROVIDER", "gemini")
+    llm_api_key: str = os.getenv("GEMINI_API_KEY") or os.getenv("LLM_API_KEY", "")
+    llm_model: str = os.getenv("LLM_MODEL", "gemini-2.5-flash")
+    llm_timeout_seconds: float = 12.0  # leaves headroom under the 30s call budget
+    llm_max_retries: int = int(os.getenv("LLM_MAX_RETRIES", "3"))
+    llm_backoff_base_seconds: float = float(os.getenv("LLM_BACKOFF_BASE_SECONDS", "1.0"))
 
     model_config = SettingsConfigDict(env_prefix="SHL_")
 
