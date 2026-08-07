@@ -47,6 +47,7 @@ export function RescheduleDialog({
   const [newSlot, setNewSlot] = useState("");
   const [reason, setReason] = useState<RescheduleReason>("conflict");
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const dialogEl = dialogRef.current;
@@ -66,6 +67,7 @@ export function RescheduleDialog({
       setNewSlot("");
       setReason("conflict");
       setError(null);
+      setIsSubmitting(false);
     }
   }, [isOpen]);
 
@@ -94,6 +96,7 @@ export function RescheduleDialog({
     }
 
     setError(null);
+    setIsSubmitting(true);
     try {
       const result = await onSubmit(newSlotUtc, reason);
       if (!result.success) {
@@ -106,6 +109,23 @@ export function RescheduleDialog({
       // still surfaced through the same error region so screen reader
       // users get one consistent place to listen for problems.
       setError("Something went wrong. Please try again.");
+    } finally {
+      // Always clears, whether the try block returned early, threw, or
+      // completed — a bare `setIsSubmitting(false)` after the try/catch
+      // would be skipped by the early `return` inside the failure branch.
+      setIsSubmitting(false);
+    }
+  }
+
+  // Native <dialog> fires 'cancel' before 'close' when dismissed via
+  // ESC. Blocking it while a request is in flight prevents the dialog
+  // from disappearing mid-submit — the user would have no way to see
+  // whether their request actually went through.
+  function handleDialogCancel(
+    event: React.SyntheticEvent<HTMLDialogElement>,
+  ): void {
+    if (isSubmitting) {
+      event.preventDefault();
     }
   }
 
@@ -113,9 +133,10 @@ export function RescheduleDialog({
     <dialog
       ref={dialogRef}
       onClose={onClose}
+      onCancel={handleDialogCancel}
       aria-labelledby="reschedule-dialog-heading"
     >
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} aria-busy={isSubmitting}>
         <h2 id="reschedule-dialog-heading">Request Reschedule</h2>
 
         <div>
@@ -134,6 +155,7 @@ export function RescheduleDialog({
             value={newSlot}
             min={minSelectable}
             onChange={(event) => setNewSlot(event.target.value)}
+            disabled={isSubmitting}
             required
           />
         </div>
@@ -146,6 +168,7 @@ export function RescheduleDialog({
             onChange={(event) =>
               setReason(event.target.value as RescheduleReason)
             }
+            disabled={isSubmitting}
           >
             {REASON_OPTIONS.map(([value, label]) => (
               <option key={value} value={value}>
@@ -155,6 +178,12 @@ export function RescheduleDialog({
           </select>
         </div>
 
+        {isSubmitting && (
+          <p role="status" className="reschedule-dialog__status">
+            Submitting your request…
+          </p>
+        )}
+
         {error && (
           <p role="alert" className="reschedule-dialog__error">
             {error}
@@ -162,10 +191,12 @@ export function RescheduleDialog({
         )}
 
         <div>
-          <button type="button" onClick={onClose}>
+          <button type="button" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </button>
-          <button type="submit">Submit</button>
+          <button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Submitting…" : "Submit"}
+          </button>
         </div>
       </form>
     </dialog>
