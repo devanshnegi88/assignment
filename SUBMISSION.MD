@@ -174,6 +174,7 @@ The function returns the following typed response:
   success: boolean;
   error?: string;
 }
+```
 
 
 
@@ -219,3 +220,4 @@ Parent selects:
 
 UTC representation:
 2026-08-21T23:30:00.000Z
+```
