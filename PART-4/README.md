@@ -1,8 +1,3 @@
-
-## `PART-4/README.md`
-
-
-```md
 # Part 4 — Explain-It-Yourself Video
 
 ## Recording
