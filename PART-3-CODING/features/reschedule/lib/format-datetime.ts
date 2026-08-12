@@ -40,16 +40,16 @@ export function toUtcIsoString(localDateTimeInputValue: string): string {
     localDateTimeInputValue,
   );
 
-  // const utcValue = new Date(localDateTimeInputValue).toISOString();
+  const utcValue = new Date(localDateTimeInputValue).toISOString();
 
-  // console.log(
-  //   "[Timezone Demo] UTC datetime:",
-  //   utcValue,
-  // );
+  console.log(
+    "[Timezone Demo] UTC datetime:",
+    utcValue,
+  );
 
 
-  // return utcValue;
-  return localDateTimeInputValue;
+  return utcValue;
+  // return localDateTimeInputValue;
 
 
 }
